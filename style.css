@@ -1,0 +1,44 @@
+body {
+  font-family: sans-serif;
+  padding: 20px;
+  background: #f5f5f5;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.board {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: flex-start;
+}
+
+.column {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px;
+  width: 250px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.column h2 {
+  text-align: center;
+}
+
+
+.task-list {
+  margin-top: 10px;
+  min-height: 50px;
+}
+
+.task {
+  background: #ffd;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 5px;
+  cursor: move;
+}
