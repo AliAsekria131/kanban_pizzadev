@@ -1,9 +1,22 @@
+// // Firebase SDK Configuration
+// const firebaseConfig = {
+//   apiKey: "AIzaSyAg_od40W0g477isds61y9BVrlmKo7-1LY",
+//   authDomain: "kanban-pizzadev.firebaseapp.com",
+//   projectId: "kanban-pizzadev",
+//   storageBucket: "kanban-pizzadev.firebasestorage.app",
+//   messagingSenderId: "303784063094",
+//   appId: "1:303784063094:web:93cd91dce5cd33d7d1af57",
+//   measurementId: "G-RKSYV53YG5",
+//   databaseURL: "https://kanban-pizzadev-default-rtdb.asia-southeast1.firebasedatabase.app/"
+// };
+
+
 // Firebase SDK Configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAg_od40W0g477isds61y9BVrlmKo7-1LY", // Keep the original API key
+  apiKey: "AIzaSyAg_od40W0g477isds61y9BVrlmKo7-1LY", // استبدل هذا بمفتاح API الخاص بك الفعلي
   authDomain: "kanban-pizzadev.firebaseapp.com",
   projectId: "kanban-pizzadev",
-  storageBucket: "kanban-pizzadev.firebasestorage.app",
+  storageBucket: "kanban-pizzadev.appspot.com", // تأكد من أن هذا هو الصحيح لمشروعك
   messagingSenderId: "303784063094",
   appId: "1:303784063094:web:93cd91dce5cd33d7d1af57",
   measurementId: "G-RKSYV53YG5",
@@ -37,35 +50,81 @@ const kanbanApp = document.getElementById("kanban-app");
 const welcomeMessage = document.getElementById("welcome-message");
 const logoutButton = document.getElementById("logout-button");
 const boardDiv = document.getElementById("board");
+const generalErrorMessage = document.getElementById("general-error-message");
+
 
 const defaultColumns = ["todo", "doing", "done"];
+const columnTitles = { // لإظهار أسماء أعمدة أفضل
+    "todo": "المهام المطلوبة",
+    "doing": "قيد التنفيذ",
+    "done": "مكتملة"
+};
 let currentUserId = null;
 let tasksListeners = {}; // To keep track of listeners and detach them on logout
 
+// --- Helper function to display errors ---
+function displayAuthError(element, error) {
+    console.error("Authentication Error:", error);
+    let message = "حدث خطأ ما. الرجاء المحاولة مرة أخرى.";
+    switch (error.code) {
+        case "auth/invalid-email":
+            message = "البريد الإلكتروني غير صالح.";
+            break;
+        case "auth/user-disabled":
+            message = "تم تعطيل هذا الحساب.";
+            break;
+        case "auth/user-not-found":
+            message = "لا يوجد حساب بهذا البريد الإلكتروني.";
+            break;
+        case "auth/wrong-password":
+            message = "كلمة المرور غير صحيحة.";
+            break;
+        case "auth/email-already-in-use":
+            message = "هذا البريد الإلكتروني مستخدم بالفعل.";
+            break;
+        case "auth/weak-password":
+            message = "كلمة المرور ضعيفة جداً (يجب أن تكون 6 أحرف على الأقل).";
+            break;
+        case "auth/operation-not-allowed":
+            message = "تسجيل الدخول بالبريد وكلمة المرور غير مفعل.";
+            break;
+        default:
+            message = error.message; // رسالة الخطأ الأصلية من Firebase
+    }
+    element.textContent = message;
+}
+
+function displayGeneralError(message) {
+    generalErrorMessage.textContent = message;
+    console.error("General Error:", message);
+}
+
 // --- Authentication State Observer ---
-auth.onAuthStateChanged(user => {
+auth.onAuthStateChanged(user => { // تم إصلاح onauth إلى auth
   if (user) {
-    // User is signed in
     currentUserId = user.uid;
     authSection.style.display = "none";
-    kanbanApp.style.display = "block";
-    logoutButton.style.display = "block";
-    welcomeMessage.textContent = `مرحباً، ${user.email}`;
-    welcomeMessage.style.display = "block";
-    loadUserKanbanData(currentUserId);
-  } else {
-    // User is signed out
-    currentUserId = null;
-    authSection.style.display = "block";
-    loginContainer.style.display = "block"; // Default to login form
-    signupContainer.style.display = "none";
-    kanbanApp.style.display = "none";
-    logoutButton.style.display = "none";
-    welcomeMessage.style.display = "none";
-    boardDiv.innerHTML = ""; // Clear the board
+    kanbanApp.style.display = "block"; // إظهار لوحة كانبان
+    // logoutButton.style.display = "block"; // يتم التحكم به عبر CSS في #app-header
+    welcomeMessage.textContent = `مرحباً، ${user.email || 'المستخدم'}`;
+    // welcomeMessage.style.display = "block"; // يتم التحكم به عبر CSS في #app-header
     loginMessage.textContent = "";
     signupMessage.textContent = "";
-    // Detach any active Firebase listeners for tasks
+    generalErrorMessage.textContent = "";
+    loadUserKanbanData(currentUserId);
+  } else {
+    currentUserId = null;
+    authSection.style.display = "flex"; // استخدام flex لتوسيط المحتوى
+    loginContainer.style.display = "block";
+    signupContainer.style.display = "none";
+    kanbanApp.style.display = "none";
+    // logoutButton.style.display = "none";
+    // welcomeMessage.style.display = "none";
+    boardDiv.innerHTML = "";
+    loginMessage.textContent = ""; // مسح رسائل الخطأ عند تسجيل الخروج
+    signupMessage.textContent = "";
+    generalErrorMessage.textContent = "";
+
     Object.keys(tasksListeners).forEach(column => {
       if (tasksListeners[column]) {
         tasksListeners[column].off();
@@ -75,25 +134,33 @@ auth.onAuthStateChanged(user => {
   }
 });
 
-// --- Event Listeners for Auth UI Toggling ---
+// --- UI Toggling ---
 showSignupButton.addEventListener("click", () => {
   loginContainer.style.display = "none";
   signupContainer.style.display = "block";
   loginMessage.textContent = "";
+  signupMessage.textContent = "";
 });
 
 showLoginButton.addEventListener("click", () => {
   signupContainer.style.display = "none";
   loginContainer.style.display = "block";
+  loginMessage.textContent = "";
   signupMessage.textContent = "";
 });
 
-// --- Signup Functionality ---
+// --- Signup ---
 signupButton.addEventListener("click", () => {
-  const email = signupEmailInput.value;
+  const email = signupEmailInput.value.trim();
   const password = signupPasswordInput.value;
   const confirmPassword = signupConfirmPasswordInput.value;
 
+  signupMessage.textContent = ""; // Clear previous messages
+
+  if (!email || !password || !confirmPassword) {
+    signupMessage.textContent = "يرجى ملء جميع الحقول.";
+    return;
+  }
   if (password !== confirmPassword) {
     signupMessage.textContent = "كلمتا المرور غير متطابقتين.";
     return;
@@ -103,36 +170,59 @@ signupButton.addEventListener("click", () => {
     return;
   }
 
+  signupButton.disabled = true;
+  signupButton.textContent = "جاري التسجيل...";
+
   auth.createUserWithEmailAndPassword(email, password)
     .then(userCredential => {
       signupMessage.textContent = "تم إنشاء الحساب بنجاح! جاري تسجيل الدخول...";
-      // onAuthStateChanged will handle UI update and call initializeUserKanbanData via loadUserKanbanData
+      // onAuthStateChanged will handle UI update
+      // No need to explicitly call initializeUserKanbanData, loadUserKanbanData will handle it if new user
     })
     .catch(error => {
-      signupMessage.textContent = `خطأ في التسجيل: ${error.message}`;
+      displayAuthError(signupMessage, error);
+    })
+    .finally(() => {
+      signupButton.disabled = false;
+      signupButton.textContent = "تسجيل";
     });
 });
 
-// --- Login Functionality ---
+// --- Login ---
 loginButton.addEventListener("click", () => {
-  const email = loginEmailInput.value;
+  const email = loginEmailInput.value.trim();
   const password = loginPasswordInput.value;
+  loginMessage.textContent = "";
+
+  if (!email || !password) {
+    loginMessage.textContent = "يرجى إدخال البريد الإلكتروني وكلمة المرور.";
+    return;
+  }
+
+  loginButton.disabled = true;
+  loginButton.textContent = "جاري الدخول...";
 
   auth.signInWithEmailAndPassword(email, password)
     .then(userCredential => {
-      loginMessage.textContent = "تم تسجيل الدخول بنجاح!";
-      // onAuthStateChanged will handle UI update
+      loginMessage.textContent = ""; // تم تسجيل الدخول بنجاح! (سيقوم onAuthStateChanged بالتحديث)
     })
     .catch(error => {
-      loginMessage.textContent = `خطأ في تسجيل الدخول: ${error.message}`;
+      displayAuthError(loginMessage, error);
+    })
+    .finally(() => {
+      loginButton.disabled = false;
+      loginButton.textContent = "دخول";
     });
 });
 
-// --- Logout Functionality ---
+// --- Logout ---
 logoutButton.addEventListener("click", () => {
+  logoutButton.disabled = true;
   auth.signOut().catch(error => {
     console.error("Logout error", error);
-    // Optionally display a message to the user
+    displayGeneralError("حدث خطأ أثناء تسجيل الخروج.");
+  }).finally(() => {
+    logoutButton.disabled = false;
   });
 });
 
@@ -140,20 +230,22 @@ logoutButton.addEventListener("click", () => {
 
 function initializeUserKanbanData(userId) {
   const userBoardColumnsRef = database.ref(`users/${userId}/kanban/columns`);
-  const initialColumns = {};
+  const initialColumnsData = {};
   defaultColumns.forEach(colName => {
-    initialColumns[colName] = { title: colName };
+    initialColumnsData[colName] = { title: columnTitles[colName] || colName }; // استخدام العناوين المخصصة
   });
-  return userBoardColumnsRef.set(initialColumns).then(() => {
+  return userBoardColumnsRef.set(initialColumnsData).then(() => {
       console.log("تم إنشاء أعمدة Kanban الأولية للمستخدم الجديد.");
-      return initialColumns; // Return the created columns for immediate rendering
+      return initialColumnsData;
   }).catch(error => {
       console.error("خطأ في إنشاء أعمدة Kanban الأولية: ", error);
+      displayGeneralError("خطأ في تهيئة لوحة المهام.");
   });
 }
 
 function loadUserKanbanData(userId) {
   const userBoardColumnsRef = database.ref(`users/${userId}/kanban/columns`);
+  generalErrorMessage.textContent = ""; // Clear previous general errors
 
   userBoardColumnsRef.once("value").then(snapshot => {
     if (!snapshot.exists() || Object.keys(snapshot.val()).length === 0) {
@@ -167,25 +259,30 @@ function loadUserKanbanData(userId) {
     }
   }).catch(error => {
     console.error("خطأ في تحميل بيانات لوحة المستخدم: ", error);
-    boardDiv.innerHTML = "<p>حدث خطأ أثناء تحميل بيانات لوحة المهام. الرجاء المحاولة مرة أخرى.</p>";
+    displayGeneralError("حدث خطأ أثناء تحميل بيانات لوحة المهام. الرجاء المحاولة مرة أخرى.");
   });
 }
 
 function renderColumns(columnsData) {
   if (!currentUserId) return;
-  boardDiv.innerHTML = ""; // Clear previous board content
+  boardDiv.innerHTML = "";
 
-  const columnKeys = Object.keys(columnsData);
+  const columnKeys = defaultColumns; // للحفاظ على ترتيب محدد للأعمدة
 
   columnKeys.forEach(colKey => {
     const column = columnsData[colKey];
+    if (!column) {
+        console.warn(`بيانات العمود ${colKey} غير موجودة, قد يتم إنشاؤها لاحقًا أو تحتاج إلى تهيئة.`);
+        return; // تجاوز الأعمدة غير الموجودة في البيانات
+    }
+
     const columnDiv = document.createElement("div");
     columnDiv.className = "column";
-    columnDiv.id = colKey; // Use key from DB (e.g., 'todo', 'doing')
+    columnDiv.id = colKey;
 
     columnDiv.innerHTML = `
-      <h2>${column.title.toUpperCase()}</h2>
-      <button onclick="promptAddTask(\'${colKey}\')">+ إضافة مهمة</button>
+      <h2>${(column.title || colKey).toUpperCase()}</h2>
+      <button class="add-task-btn" onclick="promptAddTask(\'${colKey}\')">+ إضافة مهمة</button>
       <div class="task-list" id="tasks-${colKey}"></div>
     `;
     boardDiv.appendChild(columnDiv);
@@ -197,8 +294,7 @@ function renderColumns(columnsData) {
       onAdd: (e) => {
         const taskId = e.item.dataset.id;
         const newColumnKey = colKey;
-        // Ensure the task is not moved to the same column it originated from by SortableJS internal move
-        if (e.from.id !== e.to.id) {
+        if (e.from.id !== e.to.id) { // تأكد من أن الانتقال تم لعمود مختلف
             moveTask(taskId, newColumnKey);
         }
       }
@@ -221,13 +317,36 @@ function addTaskToDb(columnKey, taskText) {
   newTaskRef.set({
     id: newTaskRef.key,
     text: taskText,
-    column: columnKey
+    column: columnKey,
+    createdAt: firebase.database.ServerValue.TIMESTAMP // إضافة وقت الإنشاء
   }).then(() => {
     console.log("تمت إضافة المهمة بنجاح.");
   }).catch(error => {
     console.error("خطأ في إضافة المهمة: ", error);
+    displayGeneralError("خطأ في إضافة المهمة.");
   });
 }
+
+function promptEditTask(taskId, currentText) {
+    if (!currentUserId) return;
+    const newText = prompt("قم بتعديل المهمة:", currentText);
+    if (newText && newText.trim() !== "" && newText.trim() !== currentText) {
+        updateTaskTextInDb(taskId, newText.trim());
+    }
+}
+
+function updateTaskTextInDb(taskId, newText) {
+    if (!currentUserId) return;
+    database.ref(`users/${currentUserId}/kanban/tasks/${taskId}/text`).set(newText)
+    .then(() => {
+        console.log("تم تحديث المهمة بنجاح.");
+    })
+    .catch(error => {
+        console.error("خطأ في تحديث المهمة: ", error);
+        displayGeneralError("خطأ في تحديث المهمة.");
+    });
+}
+
 
 function loadTasks(columnKey) {
   if (!currentUserId) return;
@@ -236,31 +355,51 @@ function loadTasks(columnKey) {
 
   const userTasksInColumnRef = database.ref(`users/${currentUserId}/kanban/tasks`).orderByChild("column").equalTo(columnKey);
 
-  // Detach previous listener for this column if it exists
   if (tasksListeners[columnKey]) {
     tasksListeners[columnKey].off();
   }
 
   tasksListeners[columnKey] = userTasksInColumnRef;
   userTasksInColumnRef.on("value", snapshot => {
-    listElement.innerHTML = ""; // Clear current tasks in the list
+    listElement.innerHTML = "";
     snapshot.forEach(childSnapshot => {
       const task = childSnapshot.val();
+      if (!task || !task.id) return; // تحقق من وجود المهمة ومعرفها
+
       const taskDiv = document.createElement("div");
       taskDiv.className = "task";
-      taskDiv.textContent = task.text;
       taskDiv.dataset.id = task.id;
 
-      taskDiv.oncontextmenu = (e) => {
-        e.preventDefault();
-        if (confirm("هل تريد حذف هذه المهمة؟")) {
-          deleteTask(task.id);
-        }
+      const taskTextSpan = document.createElement("span");
+      taskTextSpan.className = "task-text";
+      taskTextSpan.textContent = task.text;
+      taskTextSpan.onclick = () => promptEditTask(task.id, task.text); // تعديل عند النقر
+
+      const taskActionsDiv = document.createElement("div");
+      taskActionsDiv.className = "task-actions";
+
+      const deleteButton = document.createElement("button");
+      deleteButton.innerHTML = "&#128465;"; // أيقونة سلة مهملات
+      deleteButton.title = "حذف المهمة";
+      deleteButton.onclick = (e) => {
+          e.stopPropagation(); // منع déclenchement تعديل المهمة
+          if (confirm("هل تريد حذف هذه المهمة؟")) {
+            deleteTask(task.id);
+          }
       };
+
+      taskActionsDiv.appendChild(deleteButton);
+      taskDiv.appendChild(taskTextSpan);
+      taskDiv.appendChild(taskActionsDiv);
+
+      // بدلاً من oncontextmenu، نستخدم زر الحذف الواضح
+      // taskDiv.oncontextmenu = (e) => { /* ... */ }; // يمكن إزالتها أو تغييرها
+
       listElement.appendChild(taskDiv);
     });
   }, error => {
       console.error(`خطأ في تحميل مهام العمود ${columnKey}: `, error);
+      displayGeneralError(`خطأ في تحميل مهام العمود ${columnTitles[columnKey] || columnKey}.`);
   });
 }
 
@@ -268,22 +407,27 @@ function deleteTask(taskId) {
   if (!currentUserId) return;
   database.ref(`users/${currentUserId}/kanban/tasks/${taskId}`).remove()
     .then(() => console.log("تم حذف المهمة."))
-    .catch(error => console.error("خطأ في حذف المهمة: ", error));
+    .catch(error => {
+        console.error("خطأ في حذف المهمة: ", error);
+        displayGeneralError("خطأ في حذف المهمة.");
+    });
 }
 
 function moveTask(taskId, newColumnKey) {
   if (!currentUserId) return;
   database.ref(`users/${currentUserId}/kanban/tasks/${taskId}/column`).set(newColumnKey)
     .then(() => console.log(`تم نقل المهمة ${taskId} إلى العمود ${newColumnKey}`))
-    .catch(error => console.error("خطأ في نقل المهمة: ", error));
+    .catch(error => {
+        console.error("خطأ في نقل المهمة: ", error);
+        displayGeneralError("خطأ في نقل المهمة.");
+    });
 }
 
-// Add event listeners for Enter key in auth forms
+// Event listeners for Enter key
 loginEmailInput.addEventListener("keypress", function(event) { if (event.key === "Enter") loginPasswordInput.focus(); });
 loginPasswordInput.addEventListener("keypress", function(event) { if (event.key === "Enter") loginButton.click(); });
 signupEmailInput.addEventListener("keypress", function(event) { if (event.key === "Enter") signupPasswordInput.focus(); });
 signupPasswordInput.addEventListener("keypress", function(event) { if (event.key === "Enter") signupConfirmPasswordInput.focus(); });
 signupConfirmPasswordInput.addEventListener("keypress", function(event) { if (event.key === "Enter") signupButton.click(); });
 
-console.log("تم تحميل script.js الجديد مع دعم Firebase Auth و RTDB لكل مستخدم.");
-
+console.log("تم تحميل script.js المحدث مع تحسينات Firebase Auth و RTDB.");

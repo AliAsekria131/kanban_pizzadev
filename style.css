@@ -1,4 +1,10 @@
 body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  margin: 0;
   font-family: sans-serif;
   padding: 20px;
   background: #f5f5f5;
@@ -7,38 +13,181 @@ body {
 h1 {
   text-align: center;
   margin-bottom: 20px;
+  color: #333;
+}
+
+/* Authentication Container Styles */
+.auth-container {
+  background-color: #f0f0f0;
+  padding: 30px;
+  border-radius: 8px;
+  box-shadow: 0 0 15px rgba(0,0,0,0.2);
+  text-align: center;
+  margin-bottom: 20px;
+  width: 300px;
+}
+
+.auth-container input {
+  display: block;
+  width: calc(100% - 22px); /* Adjusted for padding and border */
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.auth-container button {
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: background-color 0.3s ease;
+}
+
+.auth-container button:hover {
+  background-color: #0056b3;
+}
+
+.auth-container button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.auth-message {
+  color: red;
+  margin-top: 10px;
+  min-height: 20px;
+  font-size: 0.9em;
+}
+
+.toggle-auth-mode {
+    margin-top: 15px;
+    color: #007bff;
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.9em;
+}
+
+/* Kanban App Styles */
+#kanban-app {
+  width: 100%;
+  max-width: 1200px; /* Added max-width for larger screens */
+  margin: auto;
+}
+
+#app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    background-color: #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+#welcome-message {
+    font-size: 1em;
+    color: #333;
+    margin: 0;
+}
+
+#logout-button {
+    padding: 8px 15px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#logout-button:hover {
+    background-color: #c82333;
 }
 
 .board {
   display: flex;
-  gap: 10px;
+  gap: 15px; /* Increased gap */
   justify-content: center;
   align-items: flex-start;
+  flex-wrap: wrap; /* Allow columns to wrap on smaller screens */
 }
 
 .column {
   background: #ffffff;
   border-radius: 10px;
-  padding: 10px;
-  width: 250px;
-  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+  padding: 15px; /* Increased padding */
+  width: 280px; /* Slightly wider columns */
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1); /* Softer shadow */
+  display: flex;
+  flex-direction: column;
 }
 
 .column h2 {
   text-align: center;
+  color: #333;
+  font-size: 1.2em;
+  margin-bottom: 15px;
 }
 
+.column button.add-task-btn {
+    padding: 8px 12px;
+    background-color: #28a745;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 10px;
+    transition: background-color 0.3s ease;
+}
+
+.column button.add-task-btn:hover {
+    background-color: #218838;
+}
 
 .task-list {
   margin-top: 10px;
-  min-height: 50px;
+  min-height: 100px; /* Increased min-height */
+  flex-grow: 1; /* Allow task list to grow */
+  background-color: #f8f9fa; /* Slight background for task list area */
+  border-radius: 5px;
+  padding: 5px;
 }
 
 .task {
-  background: #ffd;
-  border: 1px solid #ccc;
+  background: #fff8dc; /* Lighter yellow - cornsilk */
+  border: 1px solid #ddd;
   border-radius: 5px;
-  padding: 10px;
-  margin-bottom: 5px;
+  padding: 12px;
+  margin-bottom: 8px;
   cursor: move;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.task-text {
+    flex-grow: 1;
+    cursor: pointer; /* Indicate text is editable */
+}
+
+.task-actions button {
+    background: none;
+    border: none;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 5px;
+    font-size: 0.9em;
+}
+.task-actions button:hover {
+    color: #343a40;
+}
+
+/* Spinner (simple text based for now) */
+.loading-spinner {
+  font-size: 0.9em;
+  color: #0056b3;
 }
